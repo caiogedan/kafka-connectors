@@ -1,0 +1,5 @@
+pt/isel/tfm/mqtt/MqttSinkTask.class
+pt/isel/tfm/mqtt/MqttSinkConnectorConfig.class
+pt/isel/tfm/utils/VersionUtil.class
+pt/isel/tfm/MqttSinkConnector.class
+pt/isel/tfm/mqtt/MqttProducerClient.class

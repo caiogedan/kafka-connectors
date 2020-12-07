@@ -1,0 +1,7 @@
+/home/csilva/Documentos/ISEL/TFM/connector_proj/kafka-connectors/mqtt-source/src/main/java/pt/isel/tfm/utils/VersionUtil.java
+/home/csilva/Documentos/ISEL/TFM/connector_proj/kafka-connectors/mqtt-source/src/main/java/pt/isel/tfm/model/Location.java
+/home/csilva/Documentos/ISEL/TFM/connector_proj/kafka-connectors/mqtt-source/src/main/java/pt/isel/tfm/mqtt/MqttConsumerClient.java
+/home/csilva/Documentos/ISEL/TFM/connector_proj/kafka-connectors/mqtt-source/src/main/java/pt/isel/tfm/utils/JsonSerializer.java
+/home/csilva/Documentos/ISEL/TFM/connector_proj/kafka-connectors/mqtt-source/src/main/java/pt/isel/tfm/mqtt/MqttSourceConnectorConfig.java
+/home/csilva/Documentos/ISEL/TFM/connector_proj/kafka-connectors/mqtt-source/src/main/java/pt/isel/tfm/mqtt/MqttSourceTask.java
+/home/csilva/Documentos/ISEL/TFM/connector_proj/kafka-connectors/mqtt-source/src/main/java/pt/isel/tfm/MqttSourceConnector.java
