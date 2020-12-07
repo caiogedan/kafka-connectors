@@ -1,1 +1,0 @@
-# From MQTT to Kafka
