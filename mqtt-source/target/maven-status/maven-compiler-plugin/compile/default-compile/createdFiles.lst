@@ -1,7 +1,0 @@
-pt/isel/tfm/mqtt/MqttSourceTask.class
-pt/isel/tfm/utils/VersionUtil.class
-pt/isel/tfm/mqtt/MqttConsumerClient.class
-pt/isel/tfm/model/Location.class
-pt/isel/tfm/mqtt/MqttSourceConnectorConfig.class
-pt/isel/tfm/MqttSourceConnector.class
-pt/isel/tfm/utils/JsonSerializer.class

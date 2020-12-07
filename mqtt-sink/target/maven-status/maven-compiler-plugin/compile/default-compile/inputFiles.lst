@@ -1,5 +1,0 @@
-/home/csilva/Documentos/ISEL/TFM/connector_proj/kafka-connectors/mqtt-sink/src/main/java/pt/isel/tfm/MqttSinkConnector.java
-/home/csilva/Documentos/ISEL/TFM/connector_proj/kafka-connectors/mqtt-sink/src/main/java/pt/isel/tfm/utils/VersionUtil.java
-/home/csilva/Documentos/ISEL/TFM/connector_proj/kafka-connectors/mqtt-sink/src/main/java/pt/isel/tfm/mqtt/MqttSinkConnectorConfig.java
-/home/csilva/Documentos/ISEL/TFM/connector_proj/kafka-connectors/mqtt-sink/src/main/java/pt/isel/tfm/mqtt/MqttSinkTask.java
-/home/csilva/Documentos/ISEL/TFM/connector_proj/kafka-connectors/mqtt-sink/src/main/java/pt/isel/tfm/mqtt/MqttProducerClient.java
