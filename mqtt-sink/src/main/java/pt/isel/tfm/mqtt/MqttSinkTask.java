@@ -9,7 +9,6 @@ import org.apache.kafka.clients.consumer.OffsetAndMetadata;
 import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.connect.sink.SinkRecord;
 import org.apache.kafka.connect.sink.SinkTask;
-import org.eclipse.paho.client.mqttv3.MqttException;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -46,30 +45,35 @@ public class MqttSinkTask extends SinkTask {
 					mqttClient.getConnectorName());
 
 			JsonObject jsonSinkRecord;
-			byte[] mqttPayload = null;
+			MqttMessage mqttMessage = null;
 
 			try {
 				jsonSinkRecord = new Gson().fromJson(sinkRecord.value().toString(), JsonObject.class);
+				if (mqttClient.getTopic_regex().equalsIgnoreCase("registo")) {
+					JsonObject registo = new JsonObject();
+					registo.addProperty("PROFILEID", sinkRecord.key().toString());
+					jsonSinkRecord.entrySet().forEach(v -> {
+						registo.addProperty(v.getKey(), v.getValue().toString());
+					});
 
-				mqttPayload = jsonSinkRecord.toString().getBytes("UTF-8");
+					mqttMessage = new MqttMessage(registo.toString().getBytes("UTF-8"));
 
-				MqttMessage mqttMessage = new MqttMessage();
-				mqttMessage.setQos(mqttClient.getQos());
-				mqttMessage.setPayload(mqttPayload);
+				} else {
 
-				if (!mqttClient.isConnected())
-					mqttClient.connect();
+					mqttMessage = new MqttMessage(jsonSinkRecord.toString().getBytes("UTF-8"));
+					mqttMessage.setQos(mqttClient.getQos());
 
+					if (!mqttClient.isConnected())
+						mqttClient.connect();
+				}
 				mqttClient.publish(mqttClient.getMqttTopicKey(), mqttMessage);
 
-				log.debug("Published message to topic '{}' with payload '{}'", mqttClient.getMqttTopicKey(),
-						mqttPayload);
+				log.debug("Published message to topic '{}'", mqttClient.getMqttTopicKey());
 
-			} catch (UnsupportedEncodingException | MqttException e) {
+			} catch (UnsupportedEncodingException e) {
 				log.error(e.getMessage());
 			}
 		}
-
 	}
 
 	@Override

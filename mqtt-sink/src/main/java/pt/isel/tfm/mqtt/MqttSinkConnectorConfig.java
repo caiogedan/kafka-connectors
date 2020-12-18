@@ -26,6 +26,8 @@ public class MqttSinkConnectorConfig extends AbstractConfig {
 	public static final String MQTT_SSL_CA = "mqtt.connector.ssl.ca";
 	public static final String MQTT_SSL_CRT = "mqtt.connector.ssl.crt";
 	public static final String MQTT_SSL_KEY = "mqtt.connector.ssl.key";
+	
+	public static final String TOPIC_REGEX = "topics.regex";
 
 	/* KAFKA defs */
 	public static final String MQTT_CONNECTOR_KAFKA_NAME = "mqtt.connector.kafka.name";
@@ -65,7 +67,7 @@ public class MqttSinkConnectorConfig extends AbstractConfig {
 
 				.define(MQTT_CONNECTOR_TOPIC_KEY, Type.STRING, "topic", Importance.MEDIUM,
 						"Mqtt topic key, used to fetch topic from json record. processing unit. Topic used to publish to mqtt broker");
-
+			
 		log.debug("ConfigDef loaded: '{}'", configDef.toRst());
 		return configDef;
 	}

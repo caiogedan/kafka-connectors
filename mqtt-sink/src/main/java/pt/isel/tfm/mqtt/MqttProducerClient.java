@@ -7,12 +7,12 @@ import static pt.isel.tfm.mqtt.MqttSinkConnectorConfig.MQTT_CONNECTOR_TOPIC_KEY;
 import static pt.isel.tfm.mqtt.MqttSinkConnectorConfig.MQTT_KEEP_ALIVE;
 import static pt.isel.tfm.mqtt.MqttSinkConnectorConfig.MQTT_QOS;
 import static pt.isel.tfm.mqtt.MqttSinkConnectorConfig.MQTT_SERVER;
+import static pt.isel.tfm.mqtt.MqttSinkConnectorConfig.TOPIC_REGEX;
 
 import org.eclipse.paho.client.mqttv3.MqttClient;
 import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
 import org.eclipse.paho.client.mqttv3.MqttException;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
-import org.eclipse.paho.client.mqttv3.MqttPersistenceException;
 import org.eclipse.paho.client.mqttv3.internal.security.SSLSocketFactoryFactory;
 import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence;
 import org.slf4j.Logger;
@@ -22,25 +22,25 @@ public class MqttProducerClient {
 
 	private static final Logger log = LoggerFactory.getLogger(MqttProducerClient.class);
 
-	private MqttClient mqttClient;
-	private String kafkaTopic;
-	private String mqttTopicKey;
-	private String mqttClientId;
-	private String connectorName;
 	private int qos;
+	private String mqttClientId;
+	private String mqttTopicKey;
+	private String connectorName;
+	private MqttClient mqttClient;
+	private String topic_regex;
 	private MqttSinkConnectorConfig connectorConfiguration;
 	private SSLSocketFactoryFactory sslSocketFactory;
 
 	public MqttProducerClient(MqttSinkConnectorConfig config) {
 		this.connectorConfiguration = config;
 
-		log.info("Starting MqttProducerClient with connector name: '{}'", connectorName);
-
 		connectorName = connectorConfiguration.getString(MQTT_SERVER);
 		mqttClientId = connectorConfiguration.getString(MQTT_CLIENTID);
 		mqttTopicKey = connectorConfiguration.getString(MQTT_CONNECTOR_TOPIC_KEY);
 		qos = connectorConfiguration.getInt(MQTT_QOS);
-		log.info("Starting MqttProducerClient with connector name: '{}'", connectorName);
+		topic_regex = connectorConfiguration.getString(TOPIC_REGEX);
+
+		log.debug("Starting MqttProducerClient with connector name: '{}'", connectorName);
 		connect();
 	}
 
@@ -53,14 +53,11 @@ public class MqttProducerClient {
 		mqttConnectOptions.setCleanSession(connectorConfiguration.getBoolean(MQTT_CLEAN));
 
 		if (connectorConfiguration.getBoolean("mqtt.connector.ssl") == true) {
-			log.info("SSL TRUE for MqttSinkConnectorTask: '{}, and mqtt client: '{}'.", connectorName, mqttClientId);
+			log.debug("SSL TRUE for MqttSinkConnectorTask: '{}, and mqtt client: '{}'.", connectorName, mqttClientId);
 			try {
-				// String caCrtFilePath =
-				// connectorConfiguration.getString("mqtt.connector.ssl.ca");
-				// String crtFilePath =
-				// connectorConfiguration.getString("mqtt.connector.ssl.crt");
-				// String keyFilePath =
-				// connectorConfiguration.getString("mqtt.connector.ssl.key");
+				String caCrtFilePath = connectorConfiguration.getString("mqtt.connector.ssl.ca");
+				String crtFilePath = connectorConfiguration.getString("mqtt.connector.ssl.crt");
+				String keyFilePath = connectorConfiguration.getString("mqtt.connector.ssl.key");
 				// SSLUtils sslUtils = new SSLUtils(caCrtFilePath, crtFilePath, keyFilePath);
 				// sslSocketFactory = sslUtils.getMqttSocketFactory();
 				// mqttConnectOptions.setSocketFactory(sslSocketFactory);
@@ -70,14 +67,14 @@ public class MqttProducerClient {
 				log.error(e.getMessage());
 			}
 		} else {
-			log.info("SSL FALSE for MqttSinkConnectorTask: '{}, and mqtt client: '{}'.", connectorName, mqttClientId);
+			log.debug("SSL FALSE for MqttSinkConnectorTask: '{}, and mqtt client: '{}'.", connectorName, mqttClientId);
 		}
 
 		try {
 			mqttClient = new MqttClient(connectorConfiguration.getString(MQTT_SERVER), mqttClientId,
 					new MemoryPersistence());
 			mqttClient.connect(mqttConnectOptions);
-			log.info("SUCCESSFULL MQTT CONNECTION for MqttSinkConnectorTask: '{}, and mqtt client: '{}'.",
+			log.debug("SUCCESSFULL MQTT CONNECTION for MqttSinkConnectorTask: '{}, and mqtt client: '{}'.",
 					connectorName, mqttClientId);
 		} catch (MqttException e) {
 			log.error("FAILED MQTT CONNECTION for MqttSinkConnectorTask: '{}, and mqtt client: '{}'.", connectorName,
@@ -90,8 +87,13 @@ public class MqttProducerClient {
 		return mqttClient.isConnected();
 	}
 
-	public void publish(String topic, MqttMessage message) throws MqttPersistenceException, MqttException {
-		mqttClient.publish(topic, message);
+	public void publish(String topic, MqttMessage message) {
+		try {
+			mqttClient.publish(topic, message);
+		} catch (MqttException e) {
+			e.printStackTrace();
+			log.error(e.getMessage());
+		}
 	}
 
 	public void disconnect() {
@@ -115,16 +117,16 @@ public class MqttProducerClient {
 		return connectorName;
 	}
 
-	public String getKafkaTopic() {
-		return kafkaTopic;
-	}
-
 	public String getMqttTopicKey() {
 		return mqttTopicKey;
 	}
 
 	public int getQos() {
 		return qos;
+	}
+
+	public String getTopic_regex() {
+		return topic_regex;
 	}
 
 }

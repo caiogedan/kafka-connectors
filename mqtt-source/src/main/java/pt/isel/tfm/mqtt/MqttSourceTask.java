@@ -72,7 +72,6 @@ public class MqttSourceTask extends SourceTask implements MqttCallback {
 		} catch (Exception e) {
 			log.error("ERROR: Not able to create source record from mqtt message '{}' arrived on topic '{}'.",
 					message.toString(), topic);
-			log.error(e.getMessage());
 		}
 	}
 
