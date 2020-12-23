@@ -7,16 +7,25 @@ import static pt.isel.tfm.mqtt.MqttSinkConnectorConfig.MQTT_CONNECTOR_TOPIC_KEY;
 import static pt.isel.tfm.mqtt.MqttSinkConnectorConfig.MQTT_KEEP_ALIVE;
 import static pt.isel.tfm.mqtt.MqttSinkConnectorConfig.MQTT_QOS;
 import static pt.isel.tfm.mqtt.MqttSinkConnectorConfig.MQTT_SERVER;
+import static pt.isel.tfm.mqtt.MqttSinkConnectorConfig.MQTT_SSL;
+import static pt.isel.tfm.mqtt.MqttSinkConnectorConfig.MQTT_SSL_CA;
+import static pt.isel.tfm.mqtt.MqttSinkConnectorConfig.MQTT_SSL_CRT;
+import static pt.isel.tfm.mqtt.MqttSinkConnectorConfig.MQTT_SSL_KEY;
 import static pt.isel.tfm.mqtt.MqttSinkConnectorConfig.TOPIC_REGEX;
+
+import java.io.IOException;
+
+import javax.net.ssl.SSLSocketFactory;
 
 import org.eclipse.paho.client.mqttv3.MqttClient;
 import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
 import org.eclipse.paho.client.mqttv3.MqttException;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
-import org.eclipse.paho.client.mqttv3.internal.security.SSLSocketFactoryFactory;
 import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import pt.isel.tfm.utils.SSLUtils;
 
 public class MqttProducerClient {
 
@@ -29,7 +38,7 @@ public class MqttProducerClient {
 	private MqttClient mqttClient;
 	private String topic_regex;
 	private MqttSinkConnectorConfig connectorConfiguration;
-	private SSLSocketFactoryFactory sslSocketFactory;
+	private SSLSocketFactory sslSocketFactory;
 
 	public MqttProducerClient(MqttSinkConnectorConfig config) {
 		this.connectorConfiguration = config;
@@ -52,35 +61,37 @@ public class MqttProducerClient {
 		mqttConnectOptions.setKeepAliveInterval(connectorConfiguration.getInt(MQTT_KEEP_ALIVE));
 		mqttConnectOptions.setCleanSession(connectorConfiguration.getBoolean(MQTT_CLEAN));
 
-		if (connectorConfiguration.getBoolean("mqtt.connector.ssl") == true) {
-			log.debug("SSL TRUE for MqttSinkConnectorTask: '{}, and mqtt client: '{}'.", connectorName, mqttClientId);
+		if (connectorConfiguration.getBoolean(MQTT_SSL)) {
+			log.info("SSL TRUE for AsamMqttSinkConnectorTask: '{}, and mqtt client: '{}'.", connectorName, mqttClientId);
+
+			String caCrtFilePath = connectorConfiguration.getString(MQTT_SSL_CA);
+			String crtFilePath = connectorConfiguration.getString(MQTT_SSL_CRT);
+			String keyFilePath = connectorConfiguration.getString(MQTT_SSL_KEY);
+
 			try {
-				String caCrtFilePath = connectorConfiguration.getString("mqtt.connector.ssl.ca");
-				String crtFilePath = connectorConfiguration.getString("mqtt.connector.ssl.crt");
-				String keyFilePath = connectorConfiguration.getString("mqtt.connector.ssl.key");
-				// SSLUtils sslUtils = new SSLUtils(caCrtFilePath, crtFilePath, keyFilePath);
-				// sslSocketFactory = sslUtils.getMqttSocketFactory();
-				// mqttConnectOptions.setSocketFactory(sslSocketFactory);
-			} catch (Exception e) {
-				log.error("Not able to create socket factory for mqtt client: '{}', and connector: '{}'", mqttClientId,
-						connectorName);
-				log.error(e.getMessage());
+				SSLUtils sslUtils = new SSLUtils(caCrtFilePath, crtFilePath, keyFilePath);
+				sslSocketFactory = sslUtils.getMqttSocketFactory();
+
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
 			}
-		} else {
-			log.debug("SSL FALSE for MqttSinkConnectorTask: '{}, and mqtt client: '{}'.", connectorName, mqttClientId);
-		}
+
+			mqttConnectOptions.setSocketFactory(sslSocketFactory);
+		} else
+			log.info("SSL FALSE for AsamMqttSinkConnectorTask: '{}, and mqtt client: '{}'.", connectorName, mqttClientId);
 
 		try {
 			mqttClient = new MqttClient(connectorConfiguration.getString(MQTT_SERVER), mqttClientId,
 					new MemoryPersistence());
 			mqttClient.connect(mqttConnectOptions);
-			log.debug("SUCCESSFULL MQTT CONNECTION for MqttSinkConnectorTask: '{}, and mqtt client: '{}'.",
+			log.info("SUCCESSFULL MQTT CONNECTION for AsamMqttSinkConnectorTask: '{}, and mqtt client: '{}'.",
 					connectorName, mqttClientId);
 		} catch (MqttException e) {
-			log.error("FAILED MQTT CONNECTION for MqttSinkConnectorTask: '{}, and mqtt client: '{}'.", connectorName,
-					mqttClientId);
-			log.error(e.getMessage());
+			log.error("FAILED MQTT CONNECTION for AsamMqttSinkConnectorTask: '{}, and mqtt client: '{}'.",
+					connectorName, mqttClientId);
 		}
+
 	}
 
 	public boolean isConnected() {

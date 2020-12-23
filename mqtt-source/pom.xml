@@ -37,6 +37,12 @@
 			<groupId>com.google.code.gson</groupId>
 			<artifactId>gson</artifactId>
 		</dependency>
+		<!-- SSL -->
+		<dependency>
+			<groupId>org.bouncycastle</groupId>
+			<artifactId>bcpkix-jdk15on</artifactId>
+		</dependency>
+
 	</dependencies>
 
 	<build>
@@ -114,6 +120,7 @@
 									<exclude>io.confluent.*</exclude>
 									<exclude>org.apache.kafka.connect.*</exclude>
 									<exclude>org.apache.kafka:connect-api</exclude>
+									<exclude>org.bouncycastle:bcprov-jdk15on</exclude>
 								</excludes>
 							</artifactSet>
 						</configuration>

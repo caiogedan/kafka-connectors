@@ -9,7 +9,14 @@ import static pt.isel.tfm.mqtt.MqttSourceConnectorConfig.MQTT_KEEP_ALIVE;
 import static pt.isel.tfm.mqtt.MqttSourceConnectorConfig.MQTT_QOS;
 import static pt.isel.tfm.mqtt.MqttSourceConnectorConfig.MQTT_SERVER;
 import static pt.isel.tfm.mqtt.MqttSourceConnectorConfig.MQTT_SSL;
+import static pt.isel.tfm.mqtt.MqttSourceConnectorConfig.MQTT_SSL_CA;
+import static pt.isel.tfm.mqtt.MqttSourceConnectorConfig.MQTT_SSL_CRT;
+import static pt.isel.tfm.mqtt.MqttSourceConnectorConfig.MQTT_SSL_KEY;
 import static pt.isel.tfm.mqtt.MqttSourceConnectorConfig.MQTT_TOPIC;
+
+import java.io.IOException;
+
+import javax.net.ssl.SSLSocketFactory;
 
 import org.eclipse.paho.client.mqttv3.IMqttActionListener;
 import org.eclipse.paho.client.mqttv3.IMqttToken;
@@ -17,10 +24,11 @@ import org.eclipse.paho.client.mqttv3.MqttCallback;
 import org.eclipse.paho.client.mqttv3.MqttClient;
 import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
 import org.eclipse.paho.client.mqttv3.MqttException;
-import org.eclipse.paho.client.mqttv3.internal.security.SSLSocketFactoryFactory;
 import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import pt.isel.tfm.utils.SSLUtils;
 
 public class MqttConsumerClient implements IMqttActionListener {
 
@@ -32,7 +40,7 @@ public class MqttConsumerClient implements IMqttActionListener {
 	private String mqttClientId;
 	private String connectorName;
 	private MqttSourceConnectorConfig connectorConfiguration;
-	private SSLSocketFactoryFactory sslSocketFactory;
+	private SSLSocketFactory sslSocketFactory;
 
 	public MqttConsumerClient(MqttSourceConnectorConfig config, MqttCallback callback) {
 		this.connectorConfiguration = config;
@@ -48,7 +56,7 @@ public class MqttConsumerClient implements IMqttActionListener {
 
 	public void connect(MqttCallback callback) {
 		MqttConnectOptions mqttConnectOptions = new MqttConnectOptions();
-		mqttConnectOptions.setMqttVersion(MqttConnectOptions.MQTT_VERSION_3_1_1);
+		mqttConnectOptions.setMqttVersion(MqttConnectOptions.MQTT_VERSION_3_1);
 		mqttConnectOptions.setServerURIs(new String[] { connectorConfiguration.getString(MQTT_SERVER) });
 		mqttConnectOptions.setConnectionTimeout(connectorConfiguration.getInt(MQTT_COMM_TIMEOUT));
 		mqttConnectOptions.setKeepAliveInterval(connectorConfiguration.getInt(MQTT_KEEP_ALIVE));
@@ -56,21 +64,21 @@ public class MqttConsumerClient implements IMqttActionListener {
 
 		if (connectorConfiguration.getBoolean(MQTT_SSL)) {
 			log.info("SSL TRUE for MqttSourceConnectorTask: '{}, and mqtt client: '{}'.", connectorName, mqttClientId);
+			String caCrtFilePath = connectorConfiguration.getString(MQTT_SSL_CA);
+			String crtFilePath = connectorConfiguration.getString(MQTT_SSL_CRT);
+			String keyFilePath = connectorConfiguration.getString(MQTT_SSL_KEY);
+
 			try {
-				//String caCrtFilePath = connectorConfiguration.getString(MQTT_SSL_CA);
-				//String crtFilePath = connectorConfiguration.getString(MQTT_SSL_CRT);
-				//String keyFilePath = connectorConfiguration.getString(MQTT_SSL_KEY);
-				// SSLUtils sslUtils = new SSLUtils(caCrtFilePath, crtFilePath, keyFilePath);
-				// sslSocketFactory = sslUtils.getMqttSocketFactory();
-				// mqttConnectOptions.setSocketFactory(sslSocketFactory);
-			} catch (Exception e) {
-				log.error("Not able to create SSLSocketfactory: '{}', for mqtt client: '{}', and connector: '{}'",
-						sslSocketFactory, mqttClientId, connectorName);
-				log.error(e.getMessage());
+				SSLUtils sslUtils = new SSLUtils(caCrtFilePath, crtFilePath, keyFilePath);
+				sslSocketFactory = sslUtils.getMqttSocketFactory();
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
 			}
-		} else {
+
+			mqttConnectOptions.setSocketFactory(sslSocketFactory);
+		} else
 			log.info("SSL FALSE for MqttSourceConnectorTask: '{}, and mqtt client: '{}'.", connectorName, mqttClientId);
-		}
 
 		try {
 			mqttClient = new MqttClient(connectorConfiguration.getString(MQTT_SERVER), mqttClientId,
@@ -79,20 +87,13 @@ public class MqttConsumerClient implements IMqttActionListener {
 			mqttClient.connect(mqttConnectOptions);
 			log.info("SUCCESSFULL MQTT CONNECTION for AsamMqttSourceConnectorTask: '{}, and mqtt client: '{}'.",
 					connectorName, mqttClientId);
+
+			if (mqttClient.isConnected())
+				mqttClient.subscribe(mqttTopic, connectorConfiguration.getInt(MQTT_QOS));
 		} catch (MqttException e) {
 			log.error("FAILED MQTT CONNECTION for AsamMqttSourceConnectorTask: '{}, and mqtt client: '{}'.",
 					connectorName, mqttClientId);
 			log.error(e.getMessage());
-		}
-
-		try {
-			mqttClient.subscribe(mqttTopic, connectorConfiguration.getInt(MQTT_QOS));
-			log.info("SUCCESSFULL MQTT CONNECTION for MqttSinkConnectorTask: '{}, and mqtt client: '{}'.",
-					connectorName, mqttClientId);
-		} catch (MqttException e) {
-			log.error("FAILED MQTT CONNECTION for MqttSinkConnectorTask: '{}, and mqtt client: '{}'.", connectorName,
-					mqttClientId);
-			e.printStackTrace();
 		}
 	}
 
