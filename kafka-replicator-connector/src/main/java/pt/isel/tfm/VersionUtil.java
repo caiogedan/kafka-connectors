@@ -1,14 +1,14 @@
-package pt.isel.tfm.utils;
+package pt.isel.tfm;
 
 /**
- * Created by Caio Silva on 20/12/2020.
+ * Created by jeremy on 5/3/16.
  */
 public class VersionUtil {
 	public static String getVersion() {
 		try {
 			return VersionUtil.class.getPackage().getImplementationVersion();
 		} catch (Exception ex) {
-			return "1.0";
+			return "0.0.0.0";
 		}
 	}
 }

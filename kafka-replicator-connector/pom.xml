@@ -1,6 +1,8 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0"
-	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+<?xml version="1.0"?>
+<project
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd"
+	xmlns="http://maven.apache.org/POM/4.0.0"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
 	<modelVersion>4.0.0</modelVersion>
 
 	<parent>
@@ -9,12 +11,12 @@
 		<version>1.0-SNAPSHOT</version>
 	</parent>
 
-	<artifactId>mqtt-source</artifactId>
+	<artifactId>replicator</artifactId>
 	<version>1.0</version>
 	<packaging>jar</packaging>
 
-	<name>mqtt-source-connector</name>
-	<description>Kafka_connect :: MQTT Source to Kafka Connector.</description>
+	<name>kafka-replicator-connector</name>
+	<description>Kafka_connect :: Kafka topic replicator.</description>
 
 	<dependencies>
 		<dependency>
@@ -22,55 +24,27 @@
 			<artifactId>connect-api</artifactId>
 			<scope>provided</scope>
 		</dependency>
-	<dependency>
+
+		<dependency>
 			<groupId>junit</groupId>
 			<artifactId>junit</artifactId>
 			<scope>test</scope>
 		</dependency>
-		<!-- MQTT Client (Paho) -->
-		<dependency>
-			<groupId>org.eclipse.paho</groupId>
-			<artifactId>org.eclipse.paho.client.mqttv3</artifactId>
-		</dependency>
+
 		<!-- https://mvnrepository.com/artifact/com.google.code.gson/gson -->
 		<dependency>
 			<groupId>com.google.code.gson</groupId>
 			<artifactId>gson</artifactId>
 		</dependency>
-		<!-- SSL -->
-		<dependency>
-			<groupId>org.bouncycastle</groupId>
-			<artifactId>bcpkix-jdk15on</artifactId>
-		</dependency>
-
-		<!-- Protobuf -->
-<!-- 		<dependency> -->
-<!-- 			<groupId>com.google.protobuf</groupId> -->
-<!-- 			<artifactId>protobuf-java</artifactId> -->
-<!-- 		</dependency> -->
-
-		<!-- https://mvnrepository.com/artifact/io.confluent/kafka-schema-registry-client -->
-<!-- 		<dependency> -->
-<!-- 			<groupId>io.confluent</groupId> -->
-<!-- 			<artifactId>kafka-schema-registry-client</artifactId> -->
-<!-- 			<version>5.5.1</version> -->
-<!-- 		</dependency> -->
-
-		<!-- https://mvnrepository.com/artifact/io.confluent/kafka-connect-protobuf-converter -->
-<!-- 		<dependency> -->
-<!-- 			<groupId>io.confluent</groupId> -->
-<!-- 			<artifactId>kafka-connect-protobuf-converter</artifactId> -->
-<!-- 			<version>6.0.1</version> -->
-<!-- 		</dependency> -->
-
-		<!-- https://mvnrepository.com/artifact/io.confluent/kafka-connect-avro-converter -->
-<!-- 		<dependency> -->
-<!-- 			<groupId>io.confluent</groupId> -->
-<!-- 			<artifactId>kafka-connect-avro-converter</artifactId> -->
-<!-- 			<version>5.2.1</version> -->
-<!-- 		</dependency> -->
 
 	</dependencies>
+
+	<repositories>
+		<repository>
+			<id>confluent</id>
+			<url>http://packages.confluent.io/maven/</url>
+		</repository>
+	</repositories>
 
 	<build>
 		<plugins>
@@ -147,10 +121,6 @@
 									<exclude>io.confluent.*</exclude>
 									<exclude>org.apache.kafka.connect.*</exclude>
 									<exclude>org.apache.kafka:connect-api</exclude>
-									<exclude>org.bouncycastle:bcprov-jdk15on</exclude>
-<!-- 									<exclude>io.confluent:kafka-schema-registry-client</exclude> -->
-<!-- 									<exclude>io.confluent:kafka-connect-protobuf-converter</exclude> -->
-<!-- 									<exclude>io.confluent:kafka-connect-avro-converter</exclude> -->
 								</excludes>
 							</artifactSet>
 						</configuration>
@@ -165,11 +135,4 @@
 			</resource>
 		</resources>
 	</build>
-
-	<pluginRepositories>
-		<pluginRepository>
-			<id>confluent</id>
-			<url>https://packages.confluent.io/maven/</url>
-		</pluginRepository>
-	</pluginRepositories>
 </project>

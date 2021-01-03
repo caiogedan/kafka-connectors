@@ -66,9 +66,9 @@ public class MqttSinkTask extends SinkTask {
 					if (!mqttClient.isConnected())
 						mqttClient.connect();
 				}
-				mqttClient.publish(mqttClient.getMqttTopicKey(), mqttMessage);
+				mqttClient.publish(mqttClient.getMqtt_topic(), mqttMessage);
 
-				log.debug("Published message to topic '{}'", mqttClient.getMqttTopicKey());
+				log.debug("Published message to topic '{}'", mqttClient.getMqtt_topic());
 
 			} catch (UnsupportedEncodingException e) {
 				log.error(e.getMessage());

@@ -1,6 +1,8 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0"
 	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+
 	<modelVersion>4.0.0</modelVersion>
 
 	<groupId>pt.isel.tfm</groupId>
@@ -15,6 +17,8 @@
 		<module>mqtt-source</module>
 		<module>mqtt-sink</module>
 		<module>csv-sink</module>
+		<module>kafka-replicator-connector</module>
+
 	</modules>
 
 	<properties>
@@ -26,9 +30,11 @@
 		<maven-compiler-plugin.version>3.6.1</maven-compiler-plugin.version>
 		<csv.version>1.5</csv.version>
 		<gson.version>2.8.6</gson.version>
+		<protobuf.version>3.13.0</protobuf.version>
 	</properties>
 
 	<inceptionYear>2020</inceptionYear>
+
 	<developers>
 		<developer>
 			<id>46629</id>
@@ -36,6 +42,7 @@
 			<email>a46629@alunos.isel.pt</email>
 			<organization>ISEL</organization>
 		</developer>
+
 	</developers>
 
 	<dependencyManagement>
@@ -46,29 +53,34 @@
 				<artifactId>connect-api</artifactId>
 				<version>${kafka.version}</version>
 			</dependency>
+
 			<dependency>
 				<groupId>junit</groupId>
 				<artifactId>junit</artifactId>
 				<version>${junit.version}</version>
 			</dependency>
+
 			<!-- https://mvnrepository.com/artifact/com.google.code.gson/gson -->
 			<dependency>
 				<groupId>com.google.code.gson</groupId>
 				<artifactId>gson</artifactId>
 				<version>${gson.version}</version>
 			</dependency>
+
 			<!-- Json to CSV -->
 			<dependency>
 				<groupId>org.apache.commons</groupId>
 				<artifactId>commons-csv</artifactId>
 				<version>${csv.version}</version>
 			</dependency>
+
 			<!-- MQTT Client (Paho) -->
 			<dependency>
 				<groupId>org.eclipse.paho</groupId>
 				<artifactId>org.eclipse.paho.client.mqttv3</artifactId>
 				<version>1.2.0</version>
 			</dependency>
+
 			<!-- SSL -->
 			<!-- https://mvnrepository.com/artifact/org.bouncycastle/bcpkix-jdk15on -->
 			<dependency>
@@ -77,22 +89,34 @@
 				<version>1.64</version>
 			</dependency>
 
+			<!-- https://mvnrepository.com/artifact/com.google.protobuf/protobuf-java -->
+			<dependency>
+				<groupId>com.google.protobuf</groupId>
+				<artifactId>protobuf-java</artifactId>
+				<version>${protobuf.version}</version>
+			</dependency>
+
 		</dependencies>
+
 	</dependencyManagement>
 
 	<build>
 		<pluginManagement>
 			<plugins>
+
 				<plugin>
 					<groupId>org.apache.maven.plugins</groupId>
 					<artifactId>maven-jar-plugin</artifactId>
 				</plugin>
+
 				<plugin>
 					<groupId>org.apache.maven.plugins</groupId>
 					<artifactId>maven-compiler-plugin</artifactId>
 					<version>${maven-compiler-plugin.version}</version>
 				</plugin>
+
 			</plugins>
+
 		</pluginManagement>
 		<plugins>
 			<plugin>
@@ -102,17 +126,57 @@
 					<maxmem>256M</maxmem>
 				</configuration>
 			</plugin>
+
 			<plugin>
 				<artifactId>maven-assembly-plugin</artifactId>
 				<version>2.5.3</version>
 			</plugin>
+
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-shade-plugin</artifactId>
 				<version>3.1.0</version>
 			</plugin>
+
+			<!-- Schema Registry -->
+
+<!-- 			<plugin> -->
+<!-- 				<groupId>io.confluent</groupId> -->
+<!-- 				<artifactId>kafka-schema-registry-maven-plugin</artifactId> -->
+<!-- 				<version>5.5.0</version> -->
+<!-- 				<configuration> -->
+<!-- 					<schemaRegistryUrls> -->
+<!-- 						<param>http://192.168.1.82:8081</param> -->
+<!-- 					</schemaRegistryUrls> -->
+<!-- 					<subjects> -->
+<!-- 						<location>src/protobuf/location.proto</location> -->
+<!-- 					</subjects> -->
+<!-- 					<schemaTypes> -->
+<!-- 						<location>PROTOBUF</location> -->
+<!-- 					</schemaTypes> -->
+<!-- 					<references> -->
+<!-- 						<location> -->
+<!-- 							<reference> -->
+<!-- 								<name>Location.proto</name> -->
+<!-- 								<subject>location</subject> -->
+<!-- 							</reference> -->
+<!-- 						</location> -->
+<!-- 					</references> -->
+<!-- 				</configuration> -->
+<!-- 				<goals> -->
+<!-- 					<goal>register</goal> -->
+<!-- 				</goals> -->
+<!-- 			</plugin> -->
 		</plugins>
 	</build>
+
+	<pluginRepositories>
+		<pluginRepository>
+			<id>confluent</id>
+			<url>https://packages.confluent.io/maven/</url>
+		</pluginRepository>
+	</pluginRepositories>
+
 	<repositories>
 		<repository>
 			<id>confluent</id>

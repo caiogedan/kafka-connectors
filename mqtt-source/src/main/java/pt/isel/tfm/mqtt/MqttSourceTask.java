@@ -1,13 +1,12 @@
 package pt.isel.tfm.mqtt;
 
-import static pt.isel.tfm.mqtt.MqttSourceConnectorConfig.GENERAL_VALUE_CONVERTER;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
+import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.source.SourceRecord;
 import org.apache.kafka.connect.source.SourceTask;
 import org.eclipse.paho.client.mqttv3.IMqttDeliveryToken;
@@ -26,6 +25,8 @@ public class MqttSourceTask extends SourceTask implements MqttCallback {
 
 	private MqttConsumerClient mqttClient;
 	private MqttSourceConnectorConfig config;
+	// private RestService registry;
+	private Schema schema;
 
 	BlockingQueue<SourceRecord> mqttRecordQueue;
 
@@ -40,7 +41,22 @@ public class MqttSourceTask extends SourceTask implements MqttCallback {
 		// a connection to MQTT-Broker.
 		config = new MqttSourceConnectorConfig(map);
 		mqttRecordQueue = new LinkedBlockingQueue<SourceRecord>();
-		this.mqttClient = new MqttConsumerClient(config, this);
+		mqttClient = new MqttConsumerClient(config, this);
+		
+		/*
+		 * SCHEMA REGISTRY (TESTE)
+		 */
+		// registry = new
+		// RestService(config.getString(MqttSourceConnectorConfig.VALUE_SCHEMA_REGISTRY_URL));
+//		try {
+//			// schema =
+//			// registry.getLatestVersion(config.getString(mqttClient.getKafkaTopic()).concat("-value")).getSchema();
+//
+//			//ProtobufSchema s = new ProtobufSchema(registry.getLatestVersion("locations-value").getSchema());
+//
+//		} catch (IOException | RestClientException e) {
+//			log.error("Schema not found!");
+//		}
 	}
 
 	// Method which gets events from the input system and returns a
@@ -59,7 +75,7 @@ public class MqttSourceTask extends SourceTask implements MqttCallback {
 
 	@Override
 	public void connectionLost(Throwable cause) {
-		log.error("Connection for connector lost to topic:");
+		log.error("Connection for connector lost :: {}.", cause);
 	}
 
 	@Override
@@ -77,7 +93,7 @@ public class MqttSourceTask extends SourceTask implements MqttCallback {
 
 	@Override
 	public void deliveryComplete(IMqttDeliveryToken token) {
-		// TODO Auto-generated method stub
+		throw new UnsupportedOperationException("Not supported, delivery mode.");
 	}
 
 	private SourceRecord generateSourceRecord(MqttMessage message) throws Exception {
@@ -88,12 +104,17 @@ public class MqttSourceTask extends SourceTask implements MqttCallback {
 	private Object buildRecordValue(byte[] payload) throws Exception {
 		String msg = new String(payload);
 
-		if (config.getString(GENERAL_VALUE_CONVERTER).equalsIgnoreCase("json")) {
+		if (config.getString(MqttSourceConnectorConfig.GENERAL_VALUE_CONVERTER).equalsIgnoreCase("json")) {
 			return Location.jsonFormat(new Gson().fromJson(msg, Location.class));
-		} else if (config.getString(GENERAL_VALUE_CONVERTER).equalsIgnoreCase("avro")) {
+		} else if (config.getString(MqttSourceConnectorConfig.GENERAL_VALUE_CONVERTER).equalsIgnoreCase("avro")) {
 			throw new UnsupportedOperationException("AVRO Not supported yet.");
+		} else if (config.getString(MqttSourceConnectorConfig.GENERAL_VALUE_CONVERTER).equalsIgnoreCase("proto")) {
+			throw new UnsupportedOperationException("PROTOBUF Not supported yet.");
+			// log.info("PAYLOAD::: " + LocationMessage.parseFrom(payload).toString());
+			// return LocationMessage.parseFrom(payload);
 		} else {
-			throw new UnsupportedOperationException(config.getString(GENERAL_VALUE_CONVERTER) + " not supported.");
+			throw new UnsupportedOperationException(
+					config.getString(MqttSourceConnectorConfig.GENERAL_VALUE_CONVERTER).concat(" not supported."));
 		}
 	}
 }

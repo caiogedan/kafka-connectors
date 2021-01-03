@@ -1,18 +1,5 @@
 package pt.isel.tfm.mqtt;
 
-import static pt.isel.tfm.mqtt.MqttSinkConnectorConfig.MQTT_CLEAN;
-import static pt.isel.tfm.mqtt.MqttSinkConnectorConfig.MQTT_CLIENTID;
-import static pt.isel.tfm.mqtt.MqttSinkConnectorConfig.MQTT_COMM_TIMEOUT;
-import static pt.isel.tfm.mqtt.MqttSinkConnectorConfig.MQTT_CONNECTOR_TOPIC_KEY;
-import static pt.isel.tfm.mqtt.MqttSinkConnectorConfig.MQTT_KEEP_ALIVE;
-import static pt.isel.tfm.mqtt.MqttSinkConnectorConfig.MQTT_QOS;
-import static pt.isel.tfm.mqtt.MqttSinkConnectorConfig.MQTT_SERVER;
-import static pt.isel.tfm.mqtt.MqttSinkConnectorConfig.MQTT_SSL;
-import static pt.isel.tfm.mqtt.MqttSinkConnectorConfig.MQTT_SSL_CA;
-import static pt.isel.tfm.mqtt.MqttSinkConnectorConfig.MQTT_SSL_CRT;
-import static pt.isel.tfm.mqtt.MqttSinkConnectorConfig.MQTT_SSL_KEY;
-import static pt.isel.tfm.mqtt.MqttSinkConnectorConfig.TOPIC_REGEX;
-
 import java.io.IOException;
 
 import javax.net.ssl.SSLSocketFactory;
@@ -33,21 +20,21 @@ public class MqttProducerClient {
 
 	private int qos;
 	private String mqttClientId;
-	private String mqttTopicKey;
 	private String connectorName;
 	private MqttClient mqttClient;
 	private String topic_regex;
+	private String mqtt_topic;
 	private MqttSinkConnectorConfig connectorConfiguration;
 	private SSLSocketFactory sslSocketFactory;
 
 	public MqttProducerClient(MqttSinkConnectorConfig config) {
 		this.connectorConfiguration = config;
 
-		connectorName = connectorConfiguration.getString(MQTT_SERVER);
-		mqttClientId = connectorConfiguration.getString(MQTT_CLIENTID);
-		mqttTopicKey = connectorConfiguration.getString(MQTT_CONNECTOR_TOPIC_KEY);
-		qos = connectorConfiguration.getInt(MQTT_QOS);
-		topic_regex = connectorConfiguration.getString(TOPIC_REGEX);
+		connectorName = connectorConfiguration.getString(MqttSinkConnectorConfig.MQTT_SERVER);
+		mqttClientId = connectorConfiguration.getString(MqttSinkConnectorConfig.MQTT_CLIENTID);
+		topic_regex = connectorConfiguration.getString(MqttSinkConnectorConfig.TOPIC_REGEX);
+		mqtt_topic = connectorConfiguration.getString(MqttSinkConnectorConfig.MQTT_TOPIC);
+		qos = connectorConfiguration.getInt(MqttSinkConnectorConfig.MQTT_QOS);
 
 		log.debug("Starting MqttProducerClient with connector name: '{}'", connectorName);
 		connect();
@@ -56,36 +43,39 @@ public class MqttProducerClient {
 	public void connect() {
 		log.debug("Starting mqtt client: '{}', for connector: '{}'", mqttClientId, connectorName);
 		MqttConnectOptions mqttConnectOptions = new MqttConnectOptions();
-		mqttConnectOptions.setServerURIs(new String[] { connectorConfiguration.getString(MQTT_SERVER) });
-		mqttConnectOptions.setConnectionTimeout(connectorConfiguration.getInt(MQTT_COMM_TIMEOUT));
-		mqttConnectOptions.setKeepAliveInterval(connectorConfiguration.getInt(MQTT_KEEP_ALIVE));
-		mqttConnectOptions.setCleanSession(connectorConfiguration.getBoolean(MQTT_CLEAN));
+		mqttConnectOptions
+				.setServerURIs(new String[] { connectorConfiguration.getString(MqttSinkConnectorConfig.MQTT_SERVER) });
+		mqttConnectOptions
+				.setConnectionTimeout(connectorConfiguration.getInt(MqttSinkConnectorConfig.MQTT_COMM_TIMEOUT));
+		mqttConnectOptions.setKeepAliveInterval(connectorConfiguration.getInt(MqttSinkConnectorConfig.MQTT_KEEP_ALIVE));
+		mqttConnectOptions.setCleanSession(connectorConfiguration.getBoolean(MqttSinkConnectorConfig.MQTT_CLEAN));
 
-		if (connectorConfiguration.getBoolean(MQTT_SSL)) {
-			log.info("SSL TRUE for AsamMqttSinkConnectorTask: '{}, and mqtt client: '{}'.", connectorName, mqttClientId);
+		if (connectorConfiguration.getBoolean(MqttSinkConnectorConfig.MQTT_SSL)) {
+			log.debug("SSL TRUE for AsamMqttSinkConnectorTask: '{}, and mqtt client: '{}'.", connectorName,
+					mqttClientId);
 
-			String caCrtFilePath = connectorConfiguration.getString(MQTT_SSL_CA);
-			String crtFilePath = connectorConfiguration.getString(MQTT_SSL_CRT);
-			String keyFilePath = connectorConfiguration.getString(MQTT_SSL_KEY);
+			String caCrtFilePath = connectorConfiguration.getString(MqttSinkConnectorConfig.MQTT_SSL_CA);
+			String crtFilePath = connectorConfiguration.getString(MqttSinkConnectorConfig.MQTT_SSL_CRT);
+			String keyFilePath = connectorConfiguration.getString(MqttSinkConnectorConfig.MQTT_SSL_KEY);
 
 			try {
 				SSLUtils sslUtils = new SSLUtils(caCrtFilePath, crtFilePath, keyFilePath);
 				sslSocketFactory = sslUtils.getMqttSocketFactory();
 
 			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
+				log.error(e.getCause().toString());
 			}
 
 			mqttConnectOptions.setSocketFactory(sslSocketFactory);
 		} else
-			log.info("SSL FALSE for AsamMqttSinkConnectorTask: '{}, and mqtt client: '{}'.", connectorName, mqttClientId);
+			log.debug("SSL FALSE for AsamMqttSinkConnectorTask: '{}, and mqtt client: '{}'.", connectorName,
+					mqttClientId);
 
 		try {
-			mqttClient = new MqttClient(connectorConfiguration.getString(MQTT_SERVER), mqttClientId,
-					new MemoryPersistence());
+			mqttClient = new MqttClient(connectorConfiguration.getString(MqttSinkConnectorConfig.MQTT_SERVER),
+					mqttClientId, new MemoryPersistence());
 			mqttClient.connect(mqttConnectOptions);
-			log.info("SUCCESSFULL MQTT CONNECTION for AsamMqttSinkConnectorTask: '{}, and mqtt client: '{}'.",
+			log.debug("SUCCESSFULL MQTT CONNECTION for AsamMqttSinkConnectorTask: '{}, and mqtt client: '{}'.",
 					connectorName, mqttClientId);
 		} catch (MqttException e) {
 			log.error("FAILED MQTT CONNECTION for AsamMqttSinkConnectorTask: '{}, and mqtt client: '{}'.",
@@ -102,8 +92,7 @@ public class MqttProducerClient {
 		try {
 			mqttClient.publish(topic, message);
 		} catch (MqttException e) {
-			e.printStackTrace();
-			log.error(e.getMessage());
+			log.error(e.getCause().toString());
 		}
 	}
 
@@ -111,8 +100,7 @@ public class MqttProducerClient {
 		try {
 			mqttClient.disconnect();
 		} catch (MqttException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			log.error(e.getCause().toString());
 		}
 	}
 
@@ -128,8 +116,8 @@ public class MqttProducerClient {
 		return connectorName;
 	}
 
-	public String getMqttTopicKey() {
-		return mqttTopicKey;
+	public String getMqtt_topic() {
+		return mqtt_topic;
 	}
 
 	public int getQos() {
