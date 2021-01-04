@@ -5,8 +5,6 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.kafka.common.config.ConfigDef;
-import org.apache.kafka.common.config.ConfigDef.Importance;
-import org.apache.kafka.common.config.ConfigDef.Type;
 import org.apache.kafka.common.config.ConfigException;
 import org.apache.kafka.connect.connector.Task;
 import org.apache.kafka.connect.errors.ConnectException;
@@ -33,22 +31,6 @@ public class MqttSinkConnector extends SinkConnector {
 		try {
 			config = new MqttSinkConnectorConfig(map);
 
-			/*
-			 * REMOVER PROPRIEDADES AFETADAS POR DEFAULT E VOLTAR ÀS ESCREVER
-			 */
-
-			MqttSinkConnectorConfig.configuration.configKeys().keySet()
-					.remove(MqttSinkConnectorConfig.CONNECTOR_KAFKA_DEFAULT_URI);
-			MqttSinkConnectorConfig.configuration.configKeys().keySet()
-					.remove(MqttSinkConnectorConfig.CONNECTOR_KAFKA_DEFAULT_FACTOR);
-
-			MqttSinkConnectorConfig.configuration
-					.define(MqttSinkConnectorConfig.CONNECTOR_KAFKA_DEFAULT_URI, Type.STRING,
-							config.getString(MqttSinkConnectorConfig.MQTT_KAFKA_URI), Importance.HIGH, "")
-					.define(MqttSinkConnectorConfig.CONNECTOR_KAFKA_DEFAULT_FACTOR, Type.INT,
-							config.getInt(MqttSinkConnectorConfig.MQTT_KAFKA_REPLICATION_FACTOR), Importance.MEDIUM,
-							"");
-
 		} catch (ConfigException e) {
 			throw new ConnectException("Couldn't start MqttSinkConnector due to configuration error", e);
 		}
@@ -73,6 +55,6 @@ public class MqttSinkConnector extends SinkConnector {
 
 	@Override
 	public ConfigDef config() {
-		return MqttSinkConnectorConfig.configuration;
+		return MqttSinkConnectorConfig.CONFIG;
 	}
 }

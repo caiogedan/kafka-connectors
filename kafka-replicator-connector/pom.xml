@@ -30,11 +30,9 @@
 			<artifactId>junit</artifactId>
 			<scope>test</scope>
 		</dependency>
-
-		<!-- https://mvnrepository.com/artifact/com.google.code.gson/gson -->
 		<dependency>
-			<groupId>com.google.code.gson</groupId>
-			<artifactId>gson</artifactId>
+			<groupId>org.apache.kafka</groupId>
+			<artifactId>kafka-clients</artifactId>
 		</dependency>
 
 	</dependencies>
@@ -121,6 +119,7 @@
 									<exclude>io.confluent.*</exclude>
 									<exclude>org.apache.kafka.connect.*</exclude>
 									<exclude>org.apache.kafka:connect-api</exclude>
+									<exclude>org.apache.kafka.clients.*</exclude>
 								</excludes>
 							</artifactSet>
 						</configuration>

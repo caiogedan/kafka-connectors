@@ -32,13 +32,13 @@ public class CSVSinkTask extends SinkTask {
 	public void put(Collection<SinkRecord> collection) {
 		for (Iterator<SinkRecord> sinkRecordIterator = collection.iterator(); sinkRecordIterator.hasNext();) {
 			SinkRecord sinkRecord = sinkRecordIterator.next();
-			log.debug("Received record: '{}'", sinkRecord.value());
+			//log.debug("Received record: '{}'", sinkRecord.value());
 			try {
 				if (sinkRecord.value().toString() != null)
 					csv.appendCSV(sinkRecord.value().toString());
 
 			} catch (Exception e) {
-				log.error("Error on obtain SinkRecord.");
+				log.error("Error on obtain SinkRecord {}.", e.getCause());
 			}
 		}
 	}

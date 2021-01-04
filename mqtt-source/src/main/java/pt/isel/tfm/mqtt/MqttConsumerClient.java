@@ -20,25 +20,28 @@ public class MqttConsumerClient implements IMqttActionListener {
 
 	private static final Logger log = LoggerFactory.getLogger(MqttConsumerClient.class);
 
-	private MqttClient mqttClient;
-	private String kafkaTopic;
-	private String mqttTopic;
-	private String mqttClientId;
-	private String connectorName;
-	private MqttSourceConnectorConfig connectorConfiguration;
 	private SSLSocketFactory sslSocketFactory;
+	private MqttClient mqttClient;
+	private MqttSourceConnectorConfig mqttProps;
 	private MqttCallback callback;
 
-	public MqttConsumerClient(MqttSourceConnectorConfig config, MqttCallback callback) {
-		this.connectorConfiguration = config;
+	private String destinationTopic;
+	private String mqttTopic;
+	private String mqttClientId;
+	private String mqttBrokerUri;
+	private int qos;
 
-		log.debug("Starting MqttConsumerClient with connector name: '{}'", connectorName);
+	public MqttConsumerClient(MqttSourceConnectorConfig mqttConsumerProps, MqttCallback callback) {
+		log.debug("STARTING MQTT-SOURCE-CONNECTOR.");
 
-		connectorName = connectorConfiguration.getString(MqttSourceConnectorConfig.MQTT_CONNECTOR_KAFKA_NAME);
-		kafkaTopic = connectorConfiguration.getString(MqttSourceConnectorConfig.MQTT_KAFKA_TOPIC);
-		mqttClientId = connectorConfiguration.getString(MqttSourceConnectorConfig.MQTT_CLIENTID);
-		mqttTopic = connectorConfiguration.getString(MqttSourceConnectorConfig.MQTT_TOPIC);
+		mqttProps = mqttConsumerProps;
 		this.callback = callback;
+
+		mqttBrokerUri = mqttProps.getString(MqttSourceConnectorConfig.SOURCE_BROKER_SERVERS_CONFIG);
+		mqttClientId = mqttProps.getString(MqttSourceConnectorConfig.SOURCE_CLIENT_ID_CONFIG);
+		mqttTopic = mqttProps.getString(MqttSourceConnectorConfig.SOURCE_TOPIC_CONFIG);
+		qos = mqttProps.getInt(MqttSourceConnectorConfig.SOURCE_QOS_CONFIG);
+		destinationTopic = mqttProps.getString(MqttSourceConnectorConfig.DESTINATION_TOPIC_CONFIG);
 
 		connect();
 	}
@@ -48,23 +51,23 @@ public class MqttConsumerClient implements IMqttActionListener {
 		 * MQTT CONFIGURATIONS
 		 */
 		MqttConnectOptions mqttConnectOptions = new MqttConnectOptions();
+
 		mqttConnectOptions.setMqttVersion(MqttConnectOptions.MQTT_VERSION_3_1_1);
-		mqttConnectOptions.setServerURIs(
-				new String[] { connectorConfiguration.getString(MqttSourceConnectorConfig.MQTT_SERVER) });
-		mqttConnectOptions
-				.setConnectionTimeout(connectorConfiguration.getInt(MqttSourceConnectorConfig.MQTT_COMM_TIMEOUT));
-		mqttConnectOptions
-				.setKeepAliveInterval(connectorConfiguration.getInt(MqttSourceConnectorConfig.MQTT_KEEP_ALIVE));
-		mqttConnectOptions.setCleanSession(connectorConfiguration.getBoolean(MqttSourceConnectorConfig.MQTT_CLEAN));
+		mqttConnectOptions.setServerURIs(new String[] { mqttBrokerUri });
+
+		mqttConnectOptions.setConnectionTimeout(mqttProps.getInt(MqttSourceConnectorConfig.SOURCE_CON_TIMEOUT_CONFIG));
+		mqttConnectOptions.setKeepAliveInterval(mqttProps.getInt(MqttSourceConnectorConfig.SOURCE_KEEP_ALIVE_CONFIG));
+		mqttConnectOptions.setCleanSession(mqttProps.getBoolean(MqttSourceConnectorConfig.SOURCE_CLEAN_CONFIG));
 
 		/*
 		 * SSL CONFIGURATION
 		 */
-		if (connectorConfiguration.getBoolean(MqttSourceConnectorConfig.MQTT_SSL)) {
-			log.debug("SSL TRUE for MqttSourceConnectorTask: '{}, and mqtt client: '{}'.", connectorName, mqttClientId);
-			String caCrtFilePath = connectorConfiguration.getString(MqttSourceConnectorConfig.MQTT_SSL_CA);
-			String crtFilePath = connectorConfiguration.getString(MqttSourceConnectorConfig.MQTT_SSL_CRT);
-			String keyFilePath = connectorConfiguration.getString(MqttSourceConnectorConfig.MQTT_SSL_KEY);
+		if (mqttProps.getBoolean(MqttSourceConnectorConfig.SOURCE_SSL_CONFIG)) {
+			log.debug("SSL TRUE for MqttSourceConnector: MQTT Client: '{}'.", mqttClientId);
+
+			String caCrtFilePath = mqttProps.getString(MqttSourceConnectorConfig.SOURCE_SSL_CA_CONFIG);
+			String crtFilePath = mqttProps.getString(MqttSourceConnectorConfig.SOURCE_SSL_CRT_CONFIG);
+			String keyFilePath = mqttProps.getString(MqttSourceConnectorConfig.SOURCE_SSL_KEY_CONFIG);
 
 			try {
 				SSLUtils sslUtils = new SSLUtils(caCrtFilePath, crtFilePath, keyFilePath);
@@ -75,27 +78,22 @@ public class MqttConsumerClient implements IMqttActionListener {
 
 			mqttConnectOptions.setSocketFactory(sslSocketFactory);
 		} else
-			log.debug("SSL FALSE for MqttSourceConnectorTask: '{}, and mqtt client: '{}'.", connectorName,
-					mqttClientId);
+			log.debug("SSL FALSE for MqttSourceConnector: MQTT Client: '{}'.", mqttClientId);
 
 		/*
 		 * MQTT CONNECT
 		 */
 		try {
-			mqttClient = new MqttClient(connectorConfiguration.getString(MqttSourceConnectorConfig.MQTT_SERVER),
-					mqttClientId, new MemoryPersistence());
+			mqttClient = new MqttClient(mqttBrokerUri, mqttClientId, new MemoryPersistence());
 			mqttClient.setCallback(callback);
 			mqttClient.connect(mqttConnectOptions);
 
-			log.debug("SUCCESSFULL MQTT CONNECTION for AsamMqttSourceConnectorTask: '{}, and mqtt client: '{}'.",
-					connectorName, mqttClientId);
+			log.debug("SUCCESSFULL MQTT CONNECTION for MqttSourceConnector: MQTT Client: '{}'.", mqttClientId);
 
 			if (mqttClient.isConnected())
-				mqttClient.subscribe(mqttTopic, connectorConfiguration.getInt(MqttSourceConnectorConfig.MQTT_QOS));
+				mqttClient.subscribe(mqttTopic, qos);
 		} catch (MqttException e) {
-			log.error("FAILED MQTT CONNECTION for AsamMqttSourceConnectorTask: '{}, and mqtt client: '{}'.",
-					connectorName, mqttClientId);
-			log.error(e.getMessage());
+			log.error(e.getCause().toString());
 		}
 	}
 
@@ -114,27 +112,23 @@ public class MqttConsumerClient implements IMqttActionListener {
 
 	@Override
 	public void onFailure(IMqttToken asyncActionToken, Throwable exception) {
-		connect();
+		try {
+			mqttClient.reconnect();
+		} catch (MqttException e) {
+			log.error(e.getCause().toString());
+		}
 	}
 
-	public MqttClient getMqttClient() {
-		return mqttClient;
-	}
-
-	public String getMqttClientId() {
-		return mqttClientId;
-	}
-
-	public String getConnectorName() {
-		return connectorName;
+	public String getDestinationTopic() {
+		return destinationTopic;
 	}
 
 	public String getMqttTopic() {
 		return mqttTopic;
 	}
 
-	public String getKafkaTopic() {
-		return kafkaTopic;
+	public String getMqttClientId() {
+		return mqttClientId;
 	}
 
 }

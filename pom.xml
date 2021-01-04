@@ -23,7 +23,7 @@
 
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-		<kafka.version>0.10.0.0-cp1</kafka.version>
+		<kafka.version>2.5.0</kafka.version>
 		<junit.version>4.12</junit.version>
 		<maven.compiler.source>1.8</maven.compiler.source>
 		<maven.compiler.target>1.8</maven.compiler.target>
@@ -96,6 +96,12 @@
 				<version>${protobuf.version}</version>
 			</dependency>
 
+			<dependency>
+				<groupId>org.apache.kafka</groupId>
+				<artifactId>kafka-clients</artifactId>
+				<version>${kafka.version}</version>
+			</dependency>
+
 		</dependencies>
 
 	</dependencyManagement>
@@ -137,36 +143,6 @@
 				<artifactId>maven-shade-plugin</artifactId>
 				<version>3.1.0</version>
 			</plugin>
-
-			<!-- Schema Registry -->
-
-<!-- 			<plugin> -->
-<!-- 				<groupId>io.confluent</groupId> -->
-<!-- 				<artifactId>kafka-schema-registry-maven-plugin</artifactId> -->
-<!-- 				<version>5.5.0</version> -->
-<!-- 				<configuration> -->
-<!-- 					<schemaRegistryUrls> -->
-<!-- 						<param>http://192.168.1.82:8081</param> -->
-<!-- 					</schemaRegistryUrls> -->
-<!-- 					<subjects> -->
-<!-- 						<location>src/protobuf/location.proto</location> -->
-<!-- 					</subjects> -->
-<!-- 					<schemaTypes> -->
-<!-- 						<location>PROTOBUF</location> -->
-<!-- 					</schemaTypes> -->
-<!-- 					<references> -->
-<!-- 						<location> -->
-<!-- 							<reference> -->
-<!-- 								<name>Location.proto</name> -->
-<!-- 								<subject>location</subject> -->
-<!-- 							</reference> -->
-<!-- 						</location> -->
-<!-- 					</references> -->
-<!-- 				</configuration> -->
-<!-- 				<goals> -->
-<!-- 					<goal>register</goal> -->
-<!-- 				</goals> -->
-<!-- 			</plugin> -->
 		</plugins>
 	</build>
 

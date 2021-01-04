@@ -1,7 +1,7 @@
 package pt.isel.tfm;
 
 /**
- * Created by jeremy on 5/3/16.
+ * Created by Caio Silva on 20/12/2020.
  */
 public class VersionUtil {
 	public static String getVersion() {

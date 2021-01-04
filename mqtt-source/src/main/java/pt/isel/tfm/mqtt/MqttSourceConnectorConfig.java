@@ -1,70 +1,111 @@
 package pt.isel.tfm.mqtt;
 
+import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
+import java.util.regex.Pattern;
+import java.util.regex.PatternSyntaxException;
 
 import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.common.config.ConfigDef.Importance;
 import org.apache.kafka.common.config.ConfigDef.Type;
+import org.apache.kafka.common.config.ConfigDef.Validator;
+import org.apache.kafka.common.config.ConfigException;
+import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
 
 public class MqttSourceConnectorConfig extends AbstractConfig {
 
-	public static ConfigDef configuration = baseConfigDef();
+	private static final Validator TOPIC_REGEX_VALIDATOR = new ConfigDef.Validator() {
+		@Override
+		public void ensureValid(String name, Object value) {
+			getTopicPattern((String) value);
+		}
+	};
 
-	/* MQTT BROKER DEFS */
-	public static final String MQTT_SERVER = "mqtt.connector.broker.uri";
-	private static final String MQTT_SERVER_DOC = "Full uri to mqtt broker";
+	/*
+	 * Used to determinate different kinds of configurations.
+	 */
+	public static final String SOURCE_PREFIX = "mqtt.source.";
+	public static final String DESTINATION_PREFIX = "destination.";
 
-	public static final String MQTT_TOPIC = "mqtt.connector.broker.topic";
-	private static final String MQTT_TOPIC_DOC = "mqtt server to connect to";
+	// Partition Monitor
+	public static final String TOPIC_LIST_TIMEOUT_MS_CONFIG = "topic.list.timeout.ms";
+	public static final String TOPIC_LIST_TIMEOUT_MS_DOC = "Amount of time the partition monitor thread should wait for kafka to return topic information before logging a timeout error.";
+	public static final int TOPIC_LIST_TIMEOUT_MS_DEFAULT = 60000;
+	public static final String TOPIC_LIST_POLL_INTERVAL_MS_CONFIG = "topic.list.poll.interval.ms";
+	public static final String TOPIC_LIST_POLL_INTERVAL_MS_DOC = "How long to wait before re-querying the source cluster for a change in the partitions to be consumed";
+	public static final int TOPIC_LIST_POLL_INTERVAL_MS_DEFAULT = 300000;
+	public static final String RECONFIGURE_TASKS_ON_LEADER_CHANGE_CONFIG = "reconfigure.tasks.on.partition.leader.change";
+	public static final String RECONFIGURE_TASKS_ON_LEADER_CHANGE_DOC = "Indicates whether the partition monitor should request a task reconfiguration when partition leaders have changed";
+	public static final boolean RECONFIGURE_TASKS_ON_LEADER_CHANGE_DEFAULT = false;
 
-	public static final String MQTT_QOS = "mqtt.connector.qos";
-	private static final String MQTT_QOS_DOC = "which qos to use for paho client connection";
+	// Internal Connector Timing
+	public static final String POLL_LOOP_TIMEOUT_MS_CONFIG = "poll.loop.timeout.ms";
+	public static final String POLL_LOOP_TIMEOUT_MS_DOC = "Maximum amount of time to wait in each poll loop without data before cancelling the poll and returning control to the worker task";
+	public static final int POLL_LOOP_TIMEOUT_MS_DEFAULT = 1000;
+	public static final String MAX_SHUTDOWN_WAIT_MS_CONFIG = "max.shutdown.wait.ms";
+	public static final String MAX_SHUTDOWN_WAIT_MS_DOC = "Maximum amount of time to wait before forcing the consumer to close";
+	public static final int MAX_SHUTDOWN_WAIT_MS_DEFAULT = 2000;
 
-	public static final String MQTT_CLEAN = "mqtt.connector.clean_session";
-	private static final String MQTT_CLEAN_DOC = "If connection should begin with clean session";
+	/*
+	 * General Source MQTT Config - Applies to Consumer and Admin Client if not
+	 * overridden by ADMIN_CLIENT_PREFIX
+	 */
+	public static final String SOURCE_BROKER_SERVERS_CONFIG = SOURCE_PREFIX.concat("broker.uri");
+	private static final String SOURCE_BROKER_SERVERS_DOC = "Full uri to mqtt broker.";
+	private static final Object SOURCE_BROKER_SERVERS_DEFAULT = ConfigDef.NO_DEFAULT_VALUE;
 
-	public static final String MQTT_CLIENTID = "mqtt.connector.client.id";
-	private static final String MQTT_CLIENTID_DOC = "mqtt client id to use don't set to use random";
+	public static final String SOURCE_TOPIC_CONFIG = SOURCE_PREFIX.concat("topic");
+	private static final String SOURCE_TOPIC_DOC = "Regular expressions indicating the topic to consume from the source broker. "
+			+ "The regex is compiled to a <code>java.util.regex.Pattern</code>. "
+			+ "For convenience, comma (',') is interpreted as interpreted as the regex-choice symbol ('|').";
+	private static final Object SOURCE_TOPIC_DEFAULT = ConfigDef.NO_DEFAULT_VALUE;
 
-	public static final String MQTT_COMM_TIMEOUT = "mqtt.connector.connection_timeout";
-	private static final String MQTT_COMM_TIMEOUT_DOC = "Connection timeout limit";
+	public static final String SOURCE_QOS_CONFIG = SOURCE_PREFIX.concat("qos");
+	private static final String SOURCE_QOS_DOC = "which QoS to use for mqtt client connection";
+	private static final int SOURCE_QOS_DEFAULT = 0;
 
-	public static final String MQTT_KEEP_ALIVE = "mqtt.connector.keep_alive";
-	private static final String MQTT_KEEP_ALIVE_DOC = "The interval to keep alive";
+	public static final String SOURCE_CLEAN_CONFIG = SOURCE_PREFIX.concat("clean.session");
+	private static final String SOURCE_CLEAN_DOC = "If connection should begin with clean session";
+	private static final boolean SOURCE_CLEAN_DEFAULT = MqttConnectOptions.CLEAN_SESSION_DEFAULT;
 
-	public static final String MQTT_SSL = "mqtt.connector.ssl";
-	private static final String MQTT_SSL_DOC = "which qos to use for paho client connection";
+	public static final String SOURCE_CLIENT_ID_CONFIG = SOURCE_PREFIX.concat("client.id");
+	private static final String SOURCE_CLIENT_ID_DOC = "MQTT client id to use don't set to use random";
+	private static final String SOURCE_CLIENT_ID_DEFAULT = "MQTT-source-connector";
 
-	public static final String MQTT_SSL_CA = "mqtt.connector.ssl.ca";
-	private static final String MQTT_SSL_CA_DOC = "If secure (SSL) then path to CA is needed.";
+	public static final String SOURCE_CON_TIMEOUT_CONFIG = SOURCE_PREFIX.concat("connection.timeout");
+	private static final String SOURCE_CON_TIMEOUT_DOC = "Connection timeout limit";
+	private static final int SOURCE_CON_TIMEOUT_DEFAULT = MqttConnectOptions.CONNECTION_TIMEOUT_DEFAULT;
 
-	public static final String MQTT_SSL_CRT = "mqtt.connector.ssl.crt";
-	private static final String MQTT_SSL_CRT_DOC = "If secure (SSL) then path to client crt is needed.";
+	public static final String SOURCE_KEEP_ALIVE_CONFIG = SOURCE_PREFIX.concat("keep.alive");
+	private static final String SOURCE_KEEP_ALIVE_DOC = "The interval to keep alive";
+	private static final int SOURCE_KEEP_ALIVE_DEFAULT = MqttConnectOptions.KEEP_ALIVE_INTERVAL_DEFAULT;
 
-	public static final String MQTT_SSL_KEY = "mqtt.connector.ssl.key";
-	private static final String MQTT_SSL_KEY_DOC = "If secure (SSL) then path to client key is needed.";
+	public static final String SOURCE_SSL_CONFIG = SOURCE_PREFIX.concat("ssl");
+	private static final String SOURCE_SSL_DOC = "If it will use SSL protocol.";
+	private static final Boolean SOURCE_SSL_DEFAULT = false;
 
-	/* KAFKA DEFS (COPY) */
+	public static final String SOURCE_SSL_CA_CONFIG = SOURCE_PREFIX.concat("ssl.ca");
+	private static final String SOURCE_SSL_CA_DOC = "If secure (SSL) then path to CA is needed.";
+	private static final Object SOURCE_SSL_CA_DEFAULT = ConfigDef.NO_DEFAULT_VALUE;
 
-	public static final String MQTT_KAFKA_URI = "mqtt.connector.kafka.uri";
-	private static final String MQTT_KAFKA_URI_DOC = "Full uri to Kafka Cluster";
+	public static final String SOURCE_SSL_CRT_CONFIG = SOURCE_PREFIX.concat("ssl.crt");
+	private static final String SOURCE_SSL_CRT_DOC = "If secure (SSL) then path to client crt is needed.";
+	private static final Object SOURCE_SSL_CRT_DEFAULT = ConfigDef.NO_DEFAULT_VALUE;
 
-	public static final String MQTT_KAFKA_REPLICATION_FACTOR = "mqtt.connector.replication.factor";
-	private static final String MQTT_KAFKA_REPLICATION_FACTOR_DOC = "Kafka replication factor";
+	public static final String SOURCE_SSL_KEY_CONFIG = SOURCE_PREFIX.concat("ssl.key");
+	private static final String SOURCE_SSL_KEY_DOC = "If secure (SSL) then path to client key is needed.";
+	private static final Object SOURCE_SSL_KEY_DEFAULT = ConfigDef.NO_DEFAULT_VALUE;
 
-	public static final String MQTT_KAFKA_TOPIC = "mqtt.connector.kafka.topic";
-	private static final String MQTT_KAFKA_TOPIC_DOC = "Kafka topic to publish on. This depends on processing unit.";
-
-	public static final String MQTT_CONNECTOR_KAFKA_NAME = "mqtt.connector.kafka.name";
-	private static final String MQTT_CONNECTOR_KAFKA_NAME_DOC = "Name used by connector to Kafka connection api";
-
-	/* DEFAULTS (KAFKA) */
-	public static final String CONNECTOR_KAFKA_DEFAULT_URI = "confluent.topic.bootstrap.servers";
-	public static final String CONNECTOR_KAFKA_DEFAULT_FACTOR = "confluent.topic.replication.factor";
+	/*
+	 * DESTINATION (KAFKA)
+	 */
+	public static final String DESTINATION_TOPIC_CONFIG = DESTINATION_PREFIX.concat("topic");
+	private static final String DESTINATION_TOPIC_DOC = "topic to publish on.";
+	private static final Object DESTINATION_TOPIC_DEFAULT = ConfigDef.NO_DEFAULT_VALUE;
 
 	public static final String VALUE_SCHEMA_REGISTRY_URL = "value.converter.schema.registry.url";
-	public static final String GENERAL_VALUE_CONVERTER = "mqtt_kafka.value.converter";
 	public static final String ENCODING = "UTF-8";
 
 	public MqttSourceConnectorConfig(ConfigDef config, Map<String, String> parsedConfig) {
@@ -72,31 +113,81 @@ public class MqttSourceConnectorConfig extends AbstractConfig {
 	}
 
 	public MqttSourceConnectorConfig(Map<String, String> parsedConfig) {
-		super(configuration, parsedConfig);
+		super(CONFIG, parsedConfig);
 	}
 
-	public static ConfigDef baseConfigDef() {
+	public static final ConfigDef CONFIG = new ConfigDef()
+			.define(SOURCE_TOPIC_CONFIG, Type.STRING, SOURCE_TOPIC_DEFAULT, TOPIC_REGEX_VALIDATOR, Importance.HIGH,
+					SOURCE_TOPIC_DOC)
+			.define(SOURCE_BROKER_SERVERS_CONFIG, Type.STRING, SOURCE_BROKER_SERVERS_DEFAULT, Importance.HIGH,
+					SOURCE_BROKER_SERVERS_DOC)
+			.define(SOURCE_QOS_CONFIG, Type.INT, SOURCE_QOS_DEFAULT, Importance.MEDIUM, SOURCE_QOS_DOC)
+			.define(SOURCE_CLEAN_CONFIG, Type.BOOLEAN, SOURCE_CLEAN_DEFAULT, Importance.MEDIUM, SOURCE_CLEAN_DOC)
+			.define(SOURCE_CLIENT_ID_CONFIG, Type.STRING, SOURCE_CLIENT_ID_DEFAULT, Importance.HIGH,
+					SOURCE_CLIENT_ID_DOC)
+			.define(SOURCE_CON_TIMEOUT_CONFIG, Type.INT, SOURCE_CON_TIMEOUT_DEFAULT, Importance.LOW,
+					SOURCE_CON_TIMEOUT_DOC)
+			.define(SOURCE_KEEP_ALIVE_CONFIG, Type.INT, SOURCE_KEEP_ALIVE_DEFAULT, Importance.LOW,
+					SOURCE_KEEP_ALIVE_DOC)
+			.define(SOURCE_SSL_CONFIG, Type.BOOLEAN, SOURCE_SSL_DEFAULT, Importance.HIGH, SOURCE_SSL_DOC)
+			.define(SOURCE_SSL_CA_CONFIG, Type.STRING, SOURCE_SSL_CA_DEFAULT, Importance.MEDIUM, SOURCE_SSL_CA_DOC)
+			.define(SOURCE_SSL_CRT_CONFIG, Type.STRING, SOURCE_SSL_CRT_DEFAULT, Importance.MEDIUM, SOURCE_SSL_CRT_DOC)
+			.define(SOURCE_SSL_KEY_CONFIG, Type.STRING, SOURCE_SSL_KEY_DEFAULT, Importance.MEDIUM, SOURCE_SSL_KEY_DOC)
+			.define(DESTINATION_TOPIC_CONFIG, Type.STRING, DESTINATION_TOPIC_DEFAULT, Importance.HIGH,
+					DESTINATION_TOPIC_DOC);
 
-		ConfigDef configDef = new ConfigDef();
-		configDef.define(MQTT_SERVER, Type.STRING, "tcp://localhost:1883", Importance.HIGH, MQTT_SERVER_DOC)
-				.define(MQTT_TOPIC, Type.STRING, "locations/#", Importance.HIGH, MQTT_TOPIC_DOC)
-				.define(MQTT_CLIENTID, Type.STRING, "kafka_source_connector", Importance.MEDIUM, MQTT_CLIENTID_DOC)
-				.define(MQTT_CLEAN, Type.BOOLEAN, true, Importance.MEDIUM, MQTT_CLEAN_DOC)
-				.define(MQTT_COMM_TIMEOUT, Type.INT, 30, Importance.LOW, MQTT_COMM_TIMEOUT_DOC)
-				.define(MQTT_KEEP_ALIVE, Type.INT, 60, Importance.LOW, MQTT_KEEP_ALIVE_DOC)
-				.define(MQTT_QOS, Type.INT, 1, Importance.LOW, MQTT_QOS_DOC)
-				.define(MQTT_SSL, Type.BOOLEAN, false, Importance.LOW, MQTT_SSL_DOC)
-				.define(MQTT_SSL_CA, Type.STRING, "./ca.crt", Importance.LOW, MQTT_SSL_CA_DOC)
-				.define(MQTT_SSL_CRT, Type.STRING, "./client.crt", Importance.LOW, MQTT_SSL_CRT_DOC)
-				.define(MQTT_SSL_KEY, Type.STRING, "./client.key", Importance.LOW, MQTT_SSL_KEY_DOC)
-				.define(MQTT_KAFKA_TOPIC, Type.STRING, "locations", Importance.MEDIUM, MQTT_KAFKA_TOPIC_DOC)
-				.define(MQTT_CONNECTOR_KAFKA_NAME, Type.STRING, "mqtt-source_kafka", Importance.MEDIUM,
-						MQTT_CONNECTOR_KAFKA_NAME_DOC)
-				.define(GENERAL_VALUE_CONVERTER, Type.STRING, "json", Importance.LOW, "Converter used.")
-				.define(MQTT_KAFKA_URI, Type.STRING, "localhost:9092", Importance.HIGH, MQTT_KAFKA_URI_DOC)
-				.define(MQTT_KAFKA_REPLICATION_FACTOR, Type.INT, 1, Importance.MEDIUM,
-						MQTT_KAFKA_REPLICATION_FACTOR_DOC);
+	/*
+	 * Returns all values with a specified prefix with the prefix stripped from the
+	 * key
+	 */
+	public Map<String, Object> allWithPrefix(String prefix) {
+		return allWithPrefix(prefix, true);
+	}
 
-		return configDef;
+	/*
+	 * Returns all values with a specified prefix with the prefix stripped from the
+	 * key if desired. Original input is set first, then overwritten (if applicable)
+	 * with the parsed values
+	 */
+	public Map<String, Object> allWithPrefix(String prefix, boolean stripPrefix) {
+		Map<String, Object> result = originalsWithPrefix(prefix, stripPrefix);
+		for (Map.Entry<String, ?> entry : values().entrySet()) {
+			if (entry.getKey().startsWith(prefix) && entry.getKey().length() > prefix.length()) {
+				if (stripPrefix)
+					result.put(entry.getKey().substring(prefix.length()), entry.getValue());
+				else
+					result.put(entry.getKey(), entry.getValue());
+			}
+		}
+		return result;
+	}
+
+	public Map<String, String> allAsStrings() {
+		Map<String, String> result = new HashMap<>();
+		result.put(TOPIC_LIST_TIMEOUT_MS_CONFIG, String.valueOf(getInt(TOPIC_LIST_TIMEOUT_MS_CONFIG)));
+		result.put(TOPIC_LIST_POLL_INTERVAL_MS_CONFIG, String.valueOf(getInt(TOPIC_LIST_POLL_INTERVAL_MS_CONFIG)));
+		result.put(RECONFIGURE_TASKS_ON_LEADER_CHANGE_CONFIG,
+				String.valueOf(getBoolean(RECONFIGURE_TASKS_ON_LEADER_CHANGE_CONFIG)));
+		result.put(POLL_LOOP_TIMEOUT_MS_CONFIG, String.valueOf(getInt(POLL_LOOP_TIMEOUT_MS_CONFIG)));
+		result.put(MAX_SHUTDOWN_WAIT_MS_CONFIG, String.valueOf(getInt(MAX_SHUTDOWN_WAIT_MS_CONFIG)));
+		result.putAll(originalsStrings());
+
+		return result;
+	}
+
+	/*
+	 * Returns a java regex pattern that can be used to match MQTT topics
+	 */
+	private static Pattern getTopicPattern(String rawRegex) {
+		String regex = new String();
+		if (Objects.nonNull(rawRegex)) {
+			regex = rawRegex.trim().replace("/", "\\").replace("+", "[a-zA-Z0-9 _.-]*").replace("#",
+					"[a-zA-Z0-9 //_#+.-]*");
+		}
+		try {
+			return Pattern.compile(regex);
+		} catch (PatternSyntaxException e) {
+			throw new ConfigException(regex + " is an invalid regex for CONFIG " + SOURCE_TOPIC_CONFIG);
+		}
 	}
 }

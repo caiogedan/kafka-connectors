@@ -11,10 +11,6 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
-import java.text.DateFormat;
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
-import java.util.Date;
 import java.util.Set;
 
 import org.apache.commons.csv.CSVFormat;
@@ -42,26 +38,6 @@ public class CSVutils {
 		filename = config.getString(CSV_FILE);
 		sep = config.getString(CSV_SEP).charAt(0);
 	}
-
-	/* Apenas para a ter, caso necessite de sua utilização no futuro. */
-//	private Date parseDateTime(String dateString) {
-//		if (dateString == null)
-//			return null;
-//		DateFormat fmt = new SimpleDateFormat("yyyy-MM-dd HH:mm:ssZ");
-//		if (dateString.contains("T"))
-//			dateString = dateString.replace('T', ' ');
-//		if (dateString.contains("Z"))
-//			dateString = dateString.replace("Z", "+0000");
-//		else
-//			dateString = dateString.substring(0, dateString.lastIndexOf(':'))
-//					+ dateString.substring(dateString.lastIndexOf(':') + 1);
-//		try {
-//			return fmt.parse(dateString);
-//		} catch (ParseException e) {
-//			log.error("Could not parse datetime: " + dateString);
-//			return null;
-//		}
-//	}
 
 	private String[] getCSVHeader(String jSon) {
 		JsonObject jobj = new Gson().fromJson(jSon, JsonObject.class);
